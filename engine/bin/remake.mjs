@@ -7,7 +7,7 @@ import { loadProject, initProject } from "../lib/project.mjs";
 
 const HELP = `remake ${VERSION}: remake any website, pixel for pixel, then make it yours.
 
-  remake doctor [--fix]          check Node, git, GitHub, Vercel and Chromium (--fix installs what it can)
+  remake doctor [--fix]          check Node, git, GitHub, Vercel or Cloudflare, and Chromium (--fix installs what it can)
   remake init <url> [--pages N] [--dir path]
                                  start a project (default folder: ~/remakes/<site>)
   remake capture [--archive [timestamp]] [--fresh]
@@ -26,8 +26,8 @@ const HELP = `remake ${VERSION}: remake any website, pixel for pixel, then make 
                                  make the new images (Codex on a ChatGPT plan, an API key, free stock, or generated art)
   remake apply [--force]         put your swaps (content.json "swap" fields) into the site
   remake board                   build the proof page and swap board (site/_remake/) + MAKE-IT-YOURS.md
-  remake ship [--name repo] [--passcode CODE]
-                                 private GitHub repo + Vercel deploy behind a passcode, then check the gate
+  remake ship [--host vercel|cloudflare] [--name repo] [--passcode CODE]
+                                 private GitHub repo + Vercel or Cloudflare Pages deploy behind a passcode, then check the gate
   remake report                  every gate in one table; ends with REMAKE COMPLETE or what's left
   remake status                  where this project stands and the next command
 
@@ -106,7 +106,7 @@ async function main() {
     }
     case "ship": {
       const { ship } = await import("../lib/ship.mjs");
-      return ship(loadProject(dir), { name: args.name, passcode: args.passcode, scope: args.scope });
+      return ship(loadProject(dir), { host: args.host, name: args.name, passcode: args.passcode, scope: args.scope });
     }
     case "report": {
       const { report } = await import("../lib/report.mjs");

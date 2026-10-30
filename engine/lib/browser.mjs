@@ -19,9 +19,14 @@ export async function launch() {
   try {
     return await chromium.launch({ args: ARGS });
   } catch (e) {
+    // Playwright's own Chromium build sometimes won't run on this OS (e.g. an old macOS it dropped
+    // support for). Fall back to the system's installed Chrome, if there is one, before giving up.
+    try {
+      return await chromium.launch({ args: ARGS, channel: "chrome" });
+    } catch {}
     throw new RemakeError(
       "Chromium for Playwright isn't installed.",
-      "Run `remake doctor --fix` (it runs `npx playwright install chromium`).",
+      "Run `remake doctor --fix` (it runs `npx playwright install chromium`), or install Google Chrome.",
     );
   }
 }
