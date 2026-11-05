@@ -2,7 +2,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawnSync } from "./spawn.mjs";
 import { copyTemplates } from "./project.mjs";
 import { MOVED_IMMUTABLE } from "./serve.mjs";
 import { RemakeError, say, ok, warn, step, readJson, writeJson } from "./util.mjs";
