@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "./spawn.mjs";
 import { launch } from "./browser.mjs";
 import { RemakeError, say, ok, warn, step, readJson, writeJson, ensureDir, sleep, UA_SUFFIX } from "./util.mjs";
 
@@ -222,9 +222,12 @@ function runCodex(bin, model, dir, items) {
     `Use your image generation tool to create ${items.length} separate images, one for each line below, at the size given. ` +
     `Save each image in the current folder under the exact file name at the start of its line. Do not create anything else. ` +
     `When done, reply with the file names you saved.\n\n${lines.join("\n")}`;
-  const args = ["exec", ...(model ? ["-m", model] : []), "--skip-git-repo-check", "--sandbox", "workspace-write", "-C", dir, prompt];
+  // The prompt goes in through stdin ("-"): on Windows codex is a .cmd file, and cmd.exe cuts an argument at its first
+  // line break and caps the whole command line at 8,191 characters.
+  const args = ["exec", ...(model ? ["-m", model] : []), "--skip-git-repo-check", "--sandbox", "workspace-write", "-C", dir, "-"];
   return new Promise((resolve) => {
-    const child = spawn(bin, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(bin, args, { stdio: ["pipe", "pipe", "pipe"] });
+    child.stdin.end(prompt);
     let out = "";
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (out += d));

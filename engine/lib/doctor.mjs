@@ -1,5 +1,5 @@
 // Doctor: is everything installed and signed in? With --fix, installs what can be installed.
-import { spawnSync } from "node:child_process";
+import { spawnSync } from "./spawn.mjs";
 import { chromium } from "playwright";
 import { say, ok, warn, step } from "./util.mjs";
 import { ENGINE_ROOT } from "./project.mjs";

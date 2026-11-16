@@ -19,7 +19,7 @@ for (const p of market.plugins) {
   else if (JSON.parse(fs.readFileSync(manifest, "utf8")).version !== p.version) fail.push(`${p.name}: version differs between marketplace and plugin.json`);
 }
 const skill = fs.readFileSync("plugins/remake/skills/remake/SKILL.md", "utf8");
-if (!/^---\nname: remake\ndescription: .{40,}\n---/m.test(skill)) fail.push("SKILL.md frontmatter: needs name and description");
+if (!/^---\r?\nname: remake\r?\ndescription: .{40,}\r?\n---/m.test(skill)) fail.push("SKILL.md frontmatter: needs name and description");
 for (const ref of skill.matchAll(/\]\((references\/[^)]+)\)/g)) if (!fs.existsSync(path.join("plugins/remake/skills/remake", ref[1]))) fail.push(`SKILL.md links to missing ${ref[1]}`);
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 if (pkg.version !== market.plugins[0].version) fail.push("package.json version differs from the plugin version");
