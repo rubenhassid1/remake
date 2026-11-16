@@ -93,7 +93,7 @@ remake capture && remake score
 
 | Command | What it does |
 | --- | --- |
-| `remake doctor [--fix]` | Checks Node, git, GitHub and Vercel sign-in and Chromium; installs what it can. |
+| `remake doctor [--fix]` | Checks Node, git, GitHub and Vercel or Railway sign-in and Chromium; installs what it can. |
 | `remake status` | Where the project stands and the next command to run. |
 | `remake init <url> [--pages N] [--dir path]` | Starts a project in `~/remakes/<site>`. `--pages 6` remakes the home page plus up to 5 pages from its navigation. |
 | `remake capture [--archive [timestamp]] [--fresh]` | Visits once, writes the site into `site/`. `--archive` rebuilds from the Internet Archive's copy; `--fresh` records again. |
@@ -105,10 +105,12 @@ remake capture && remake score
 | `remake images` / `remake images --make` | Measures every picture that still belongs to the original, then makes new ones: Codex on your ChatGPT plan, an API key, free stock or generated art. |
 | `remake apply [--force]` | Puts your swaps into the site. |
 | `remake board` | Builds the proof page, the swap board and `MAKE-IT-YOURS.md`. |
-| `remake ship [--name repo] [--passcode CODE] [--scope team]` | Private GitHub repo, Vercel deploy behind a passcode, gate check. Running it again keeps the passcode on. |
+| `remake ship [--name repo] [--passcode CODE] [--scope team] [--host vercel\|railway] [--workspace W]` | Private GitHub repo, Vercel (default) or Railway deploy behind a passcode, gate check. Running it again keeps the passcode and the host. |
 | `remake report` | Every gate in one table, ending in REMAKE COMPLETE or what's left. |
 
 You need Claude Code, Node 20 or newer, git, the GitHub CLI and free GitHub and Vercel accounts (`remake doctor --fix` installs the GitHub and Vercel command-line tools; on a Mac without Homebrew, install the GitHub CLI from cli.github.com). The first run downloads Chromium for Playwright (about 150 MB). If `npm install -g` fails with a permissions error, run the tool as `node ~/.remake/engine/bin/remake.mjs` instead. Signing in to GitHub and Vercel is one click each in your browser; Claude starts both.
+
+**Railway instead of Vercel.** Install the Railway CLI (`brew install railway`), run `railway login`, then `remake ship --host railway`. Remake adds `server.mjs` (a static server for `site/` with the same passcode gate), sets `REMAKE_PASSCODE` on a Railway service called `web`, deploys, generates a `*.up.railway.app` domain and checks the gate. Later `remake ship` runs reuse the same project, service and passcode.
 
 ## What it won't do
 

@@ -49,7 +49,7 @@ function moveReserved(root, site) {
   ok(`moved _next/static/immutable to _next/static/${MOVED_IMMUTABLE} (Vercel keeps that folder for itself), same addresses`);
 }
 
-function makePasscode(name) {
+export function makePasscode(name) {
   const word = name.replace(/[^a-z]/gi, "").toUpperCase().slice(0, 8) || "REMAKE";
   return `${word}-${crypto.randomBytes(6).toString("base64url")}`;
 }
@@ -85,30 +85,8 @@ export async function verifyGate(url, passcode, pagePath = "/") {
   return res;
 }
 
-export async function ship(project, opts = {}) {
-  const { cfg, p, root } = project;
-  const score = readJson(p.score);
-  if (!score) warn("No score yet: shipping anyway, but the report won't pass until `remake score` passes.");
-  else if (!score.pass) warn("The score doesn't pass yet. Shipping anyway so you can look at it; the report will say what's left.");
-  copyTemplates(root, { name: cfg.name, url: cfg.url });
-  // A remade page that isn't the home page (/en, /about/): send the site's root to it.
-  const first = cfg.pages?.[0] || "/";
-  if (first !== "/" && !fs.existsSync(path.join(p.site, "index.html"))) {
-    fs.writeFileSync(path.join(p.site, "index.html"), `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta http-equiv="refresh" content="0;url=${first}"><link rel="canonical" href="${first}"><title>Redirecting</title><a href="${first}">Continue</a>`);
-  }
-  moveReserved(root, p.site);
-  const prev = readJson(p.ship, {}) || {};
-  const name = opts.name || prev.name || `remake-${cfg.name}`.slice(0, 90);
-  const passcode = opts.passcode || prev.passcode || makePasscode(cfg.name);
-
-  step("Checking you're signed in to GitHub and Vercel");
-  if (!sh("gh", ["auth", "status"], { allowFail: true }).ok) {
-    throw new RemakeError("GitHub CLI isn't signed in.", "Run `gh auth login --web` and click through once in your browser.");
-  }
-  const who = sh("vercel", ["whoami"], { allowFail: true });
-  if (!who.ok) throw new RemakeError("Vercel CLI isn't signed in.", "Run `vercel login` and click through once in your browser.");
-  ok(`GitHub and Vercel (${who.stdout.trim().split("\n").pop()})`);
-
+// Commit everything and push it to a private GitHub repo (created on the first ship).
+export function saveToGitHub(root, cfg, name) {
   step("Saving to a private GitHub repo");
   if (!fs.existsSync(path.join(root, ".git"))) sh("git", ["init", "-b", "main"], { cwd: root });
   // A commit needs an author. Without one set on this machine, use the GitHub account's.
@@ -131,6 +109,52 @@ export async function ship(project, opts = {}) {
   const [repoUrl, visibility] = repo.split(" ");
   if (visibility && visibility !== "PRIVATE") warn(`The repo is ${visibility.toLowerCase()}. A remake should stay private until it's yours.`);
   ok(repoUrl);
+  return { repoUrl, visibility };
+}
+
+// Shared by every host: warn about the score, and send the site's root to the first page when needed.
+export function prepareSite(project) {
+  const { cfg, p } = project;
+  const score = readJson(p.score);
+  if (!score) warn("No score yet: shipping anyway, but the report won't pass until `remake score` passes.");
+  else if (!score.pass) warn("The score doesn't pass yet. Shipping anyway so you can look at it; the report will say what's left.");
+  // A remade page that isn't the home page (/en, /about/): send the site's root to it.
+  const first = cfg.pages?.[0] || "/";
+  if (first !== "/" && !fs.existsSync(path.join(p.site, "index.html"))) {
+    fs.writeFileSync(path.join(p.site, "index.html"), `<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta http-equiv="refresh" content="0;url=${first}"><link rel="canonical" href="${first}"><title>Redirecting</title><a href="${first}">Continue</a>`);
+  }
+  return first;
+}
+
+export function shipName(project, opts, prev) {
+  return opts.name || prev.name || `remake-${project.cfg.name}`.slice(0, 90);
+}
+
+export async function ship(project, opts = {}) {
+  const { cfg, p, root } = project;
+  const prev = readJson(p.ship, {}) || {};
+  // Where to deploy: --host railway (or --railway), else the host of the last ship, else Vercel.
+  const host = String(opts.host || (opts.railway ? "railway" : "") || prev.host || process.env.REMAKE_HOST || "vercel").toLowerCase();
+  if (host === "railway") {
+    const { shipRailway } = await import("./railway.mjs");
+    return shipRailway(project, opts, prev);
+  }
+  if (host !== "vercel") throw new RemakeError(`Unknown host "${host}".`, "Use --host vercel or --host railway.");
+  const first = prepareSite(project);
+  copyTemplates(root, { name: cfg.name, url: cfg.url });
+  moveReserved(root, p.site);
+  const name = shipName(project, opts, prev);
+  const passcode = opts.passcode || prev.passcode || makePasscode(cfg.name);
+
+  step("Checking you're signed in to GitHub and Vercel");
+  if (!sh("gh", ["auth", "status"], { allowFail: true }).ok) {
+    throw new RemakeError("GitHub CLI isn't signed in.", "Run `gh auth login --web` and click through once in your browser.");
+  }
+  const who = sh("vercel", ["whoami"], { allowFail: true });
+  if (!who.ok) throw new RemakeError("Vercel CLI isn't signed in.", "Run `vercel login` and click through once in your browser.");
+  ok(`GitHub and Vercel (${who.stdout.trim().split("\n").pop()})`);
+
+  const { repoUrl, visibility } = saveToGitHub(root, cfg, name);
 
   step("Deploying to Vercel behind a passcode");
   const scope = opts.scope || process.env.REMAKE_VERCEL_SCOPE || prev.scope || currentVercelScope();
@@ -181,7 +205,7 @@ export async function ship(project, opts = {}) {
     warn(`gate check: ${JSON.stringify(check)}`);
   }
   const head = sh("git", ["rev-parse", "HEAD"], { cwd: root }).stdout.trim();
-  const shipInfo = { name, scope, repo: repoUrl, visibility, url, deployment, passcode, verified, check, commit: head, at: new Date().toISOString() };
+  const shipInfo = { host: "vercel", name, scope, repo: repoUrl, visibility, url, deployment, passcode, verified, check, commit: head, at: new Date().toISOString() };
   writeJson(p.ship, shipInfo);
   say(`\n  Live:     ${url}\n  Passcode: ${passcode}\n  Repo:     ${repoUrl} (${(visibility || "private").toLowerCase()})\n  Proof:    ${url}/_remake/\n  Swap:     ${url}/_remake/swap/`);
   say("\nNext: remake report");

@@ -84,7 +84,7 @@ export function report(project) {
   let liveEvidence = "not deployed";
   if (ship) {
     const head = sh("git", ["rev-parse", "HEAD"], { cwd: root, allowFail: true }).stdout?.trim();
-    // REPORT.md is written by this command and .gitignore by the Vercel CLI: neither is a site change.
+    // REPORT.md is written by this command and .gitignore by the host's CLI: neither is a site change.
     const changed = (sh("git", ["status", "--porcelain"], { cwd: root, allowFail: true }).stdout || "")
       .split("\n")
       .filter((l) => l.trim() && !/\s(REPORT\.md|\.gitignore)$/.test(l));
@@ -93,7 +93,7 @@ export function report(project) {
     const isPrivate = !ship.visibility || ship.visibility === "PRIVATE";
     const hidden = ship.verified !== "yes" || ship.check?.noindex;
     liveOk = ["yes", "checkpoint"].includes(ship.verified) && current && isPrivate && hidden;
-    liveEvidence = `${ship.url} · gate ${ship.verified === "yes" ? "verified" : ship.verified === "checkpoint" ? "behind Vercel's bot check, open it in a browser to confirm" : "not verified"}${isPrivate ? "" : " · the repo is not private"}${hidden ? "" : " · search engines aren't told to stay away"}${current ? "" : " · changes since the last deploy"}`;
+    liveEvidence = `${ship.url}${ship.host && ship.host !== "vercel" ? ` (${ship.host})` : ""} · gate ${ship.verified === "yes" ? "verified" : ship.verified === "checkpoint" ? "behind the host's bot check, open it in a browser to confirm" : "not verified"}${isPrivate ? "" : " · the repo is not private"}${hidden ? "" : " · search engines aren't told to stay away"}${current ? "" : " · changes since the last deploy"}`;
   }
   add("Live and private", liveOk, liveEvidence, "run `remake ship` (after the last change)");
 
