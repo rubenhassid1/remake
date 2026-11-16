@@ -185,6 +185,7 @@ export async function frame(page) {
 
 // Scroll with the wheel, the way a visitor does, so smooth-scroll libraries move too.
 export async function wheelBy(page, net, dy, { tick = 16, chunk = 100 } = {}) {
+  const start = await page.evaluate(() => scrollY).catch(() => null);
   let left = dy;
   while (Math.abs(left) > 0) {
     const d = Math.sign(left) * Math.min(chunk, Math.abs(left));
@@ -192,6 +193,15 @@ export async function wheelBy(page, net, dy, { tick = 16, chunk = 100 } = {}) {
     left -= d;
     await page.clock.runFor(tick);
     if (net.count) await net.idle(1500);
+  }
+  // Chrome sometimes applies the last wheel step late. Wait until the page has reached
+  // the target (or the bottom) so every load is captured at the same position.
+  if (start === null) return;
+  for (let k = 0; k < 40; k++) {
+    const { y, max } = await page.evaluate(() => ({ y: scrollY, max: document.documentElement.scrollHeight - innerHeight })).catch(() => ({ y: 0, max: 0 }));
+    if (Math.abs(y - Math.max(0, Math.min(start + dy, max))) < 2) break;
+    await page.clock.runFor(tick).catch(() => {});
+    await new Promise((r) => setTimeout(r, 50));
   }
 }
 
