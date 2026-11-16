@@ -42,7 +42,7 @@ A private remake of a public marketing page, to learn from or to turn into your 
    - Fix files in `site/` directly, then re-score only what you touched: `remake score --page / --viewport phone --no-motion`. Run the full `remake score` before shipping.
    - Known causes and fixes: [references/fixing.md](references/fixing.md). After two failed attempts on the same screen, ask the `remake-judge` agent for a fresh read.
 5. **List what's theirs.** `remake slots` writes `remake/content.json`, then `remake board` builds the proof page (`/_remake/`), the swap board (`/_remake/swap/`) and `MAKE-IT-YOURS.md`.
-6. **Ship.** `remake ship`. Private GitHub repo, Vercel deploy, passcode in the `REMAKE_PASSCODE` variable, gate checked from outside. The user's request to put it on their GitHub and Vercel is the go-ahead; don't ask again. Never make the repo public or remove the passcode unless the user says so.
+6. **Ship.** `remake ship`. Private GitHub repo, Vercel deploy, passcode in the `REMAKE_PASSCODE` variable, gate checked from outside. If the user asks for Railway instead of Vercel, run `remake ship --host railway` (needs `railway login`); later ships remember the host. The user's request to put it on their GitHub and host is the go-ahead; don't ask again. Never make the repo public or remove the passcode unless the user says so.
 7. **Report.** `remake report`. Paste the whole output. If it says REMAKE NOT DONE, work on what it lists: a change after shipping means score, then ship, then report again.
 
 ## 3. Rules while repairing

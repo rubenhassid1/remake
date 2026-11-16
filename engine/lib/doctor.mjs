@@ -27,16 +27,27 @@ export async function doctor({ fix = false } = {}) {
   else if (!has("gh", ["auth", "status"]).ok) todo.push(["GitHub sign-in", "Run `gh auth login --web` and click through once in your browser."]);
   else ok("GitHub CLI, signed in");
 
+  // Hosting: Vercel (the default) or Railway (`remake ship --host railway`). One signed-in host is enough.
+  const railway = has("railway");
+  const railwayWho = railway.ok ? has("railway", ["whoami"]) : { ok: false, out: "" };
+  const wantRailway = (process.env.REMAKE_HOST || "").toLowerCase() === "railway" || railwayWho.ok;
+  if (wantRailway && railwayWho.ok) {
+    ok(`Railway CLI, signed in (${railwayWho.out.split("\n").pop()}): ship with \`remake ship --host railway\``);
+  } else if (wantRailway) {
+    todo.push(railway.ok ? ["Railway sign-in", "Run `railway login` and click through once in your browser."] : ["Railway CLI", "Run `brew install railway` or `npm install -g @railway/cli`."]);
+  }
   let vercel = has("vercel");
-  if (!vercel.ok && fix) {
+  if (!vercel.ok && fix && !wantRailway) {
     say("  installing Vercel CLI…");
     spawnSync("npm", ["install", "-g", "vercel"], { stdio: "inherit" });
     vercel = has("vercel");
   }
-  if (!vercel.ok) todo.push(["Vercel CLI", "Run `npm install -g vercel`."]);
-  else {
+  if (vercel.ok) {
     const who = has("vercel", ["whoami"]);
-    who.ok ? ok(`Vercel CLI, signed in as ${who.out.split("\n").pop()}`) : todo.push(["Vercel sign-in", "Run `vercel login` and click through once in your browser."]);
+    if (who.ok) ok(`Vercel CLI, signed in as ${who.out.split("\n").pop()}`);
+    else if (!railwayWho.ok) todo.push(["Vercel sign-in", "Run `vercel login` and click through once in your browser (or use Railway: `railway login`, then `remake ship --host railway`)."]);
+  } else if (!wantRailway) {
+    todo.push(["Vercel CLI", "Run `npm install -g vercel` (or use Railway: `railway login`, then `remake ship --host railway`)."]);
   }
 
   let browserOk = false;
