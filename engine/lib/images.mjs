@@ -241,7 +241,7 @@ async function openaiImage(e) {
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "content-type": "application/json" },
-    body: JSON.stringify({ model: process.env.REMAKE_OPENAI_IMAGE_MODEL || "gpt-image-1", prompt: `${e.prompt} Look: ${e.look}. ${SAFE}`, size, n: 1 }),
+    body: JSON.stringify({ model: process.env.REMAKE_OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst", prompt: `${e.prompt} Look: ${e.look}. ${SAFE}`, size, n: 1 }),
   });
   const j = await res.json();
   const b64 = j?.data?.[0]?.b64_json;
