@@ -67,7 +67,8 @@ export function report(project) {
     add(`${vp[0].toUpperCase() + vp.slice(1)} match`, l !== null && !vpFail(vp), l === null ? "not scored" : `lowest screen ${l.toFixed(2)}% (pass mark ${cfg.thresholds.screen}%)${heights ? ", heights equal" : ""}`, "fix the screens listed below, then `remake score`");
   }
   const motionOk = score?.motion && !v.failing.some((f) => f.startsWith("motion"));
-  add("Motion match", !!motionOk, score?.motion ? `lowest of ${score.motion.frames.length} frames ${score.motion.lowest.toFixed(2)}% (pass mark ${cfg.thresholds.motion}%)` : "not scored", "fix the motion frames listed below, then `remake score`");
+  const unscorableFrames = score?.motion?.frames.filter((f) => f.unscorable).length || 0;
+  add("Motion match", !!motionOk, score?.motion ? `lowest of ${score.motion.frames.length} frames ${score.motion.lowest.toFixed(2)}% (pass mark ${cfg.thresholds.motion}%)${unscorableFrames ? `; ${unscorableFrames} unscorable` : ""}` : "not scored", "fix the motion frames listed below, then `remake score`");
 
   if (swapped && baseline) {
     add("Score is current", true, `matched before your swaps (${baseline.at.slice(0, 16).replace("T", " ")}); it differs from the original now, on purpose`, "");

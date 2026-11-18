@@ -125,10 +125,12 @@ export async function score(project, opts = {}) {
         if (i % 4 === 0 || c.score < cfg.thresholds.motion) {
           fs.writeFileSync(path.join(p.scoreDir, `motion-${String(i + 1).padStart(2, "0")}.png`), strip(A, B, diffImage(B, c.diff, noise)));
         }
-        frames.push({ i, score: Math.round(c.score * 100) / 100, noise: Math.round(c.maskedPct * 10) / 10 });
+        frames.push({ i, score: Math.round(c.score * 100) / 100, noise: Math.round(c.maskedPct * 10) / 10, considered: c.considered, unscorable: c.unscorable });
       }
       result.motion = { frames, lowest: Math.min(...frames.map((f) => f.score)) };
       ok(`lowest ${result.motion.lowest.toFixed(2)}% over ${frames.length} frames`);
+      const unscorable = frames.filter((f) => f.unscorable);
+      if (unscorable.length) warn(`${unscorable.length} motion frames have no stable pixels; retry with \`remake score --fresh\` before judging motion.`);
     }
     store.save();
   } finally {
@@ -157,7 +159,10 @@ export function verdict(result, cfg) {
       }
     }
   }
-  if (result.motion) for (const f of result.motion.frames) if (f.score < t.motion) failing.push(`motion frame ${f.i + 1}: ${f.score}%`);
+  if (result.motion) for (const f of result.motion.frames) {
+    if (f.unscorable) failing.push(`motion frame ${f.i + 1}: no stable pixels (retry with remake score --fresh)`);
+    else if (f.score < t.motion) failing.push(`motion frame ${f.i + 1}: ${f.score}%`);
+  }
   if (!result.motion) failing.push("motion: not scored yet");
   return { pass: failing.length === 0, failing };
 }
@@ -174,7 +179,8 @@ export function printScore(result, cfg) {
   }
   if (result.motion) {
     const noise = result.motion.frames.reduce((s, x) => s + (x.noise || 0), 0) / result.motion.frames.length;
-    rows.push(["motion", "desktop", result.motion.frames.length, `${result.motion.lowest.toFixed(2)}%`, "", "", `${noise.toFixed(1)}%`]);
+    const scorable = result.motion.frames.filter((f) => !f.unscorable);
+    rows.push(["motion", "desktop", `${scorable.length}/${result.motion.frames.length} scorable`, `${result.motion.lowest.toFixed(2)}%`, "", "", `${noise.toFixed(1)}%`]);
   }
   say("\n" + table(rows));
   const v = verdict(result, cfg);

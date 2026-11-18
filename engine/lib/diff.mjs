@@ -87,8 +87,9 @@ export function compare(orig, remake, noise, tol = 24) {
     considered++;
     if (diff[i]) off++;
   }
-  const score = considered ? 100 * (1 - off / considered) : 0;
-  return { score, off, considered, masked, maskedPct: (100 * masked) / diff.length, sizeMismatch, diff };
+  const unscorable = considered === 0;
+  const score = unscorable ? 0 : 100 * (1 - off / considered);
+  return { score, off, considered, masked, unscorable, maskedPct: (100 * masked) / diff.length, sizeMismatch, diff };
 }
 
 // Remake greyed out, differences in red, masked noise in blue.
